@@ -1,36 +1,65 @@
-import argparse
+import json, subprocess, os, time
+from groq import Groq, APIStatusError
 
-def complete_any(completers):
-    completion_or_exc = None
-    for completer in completers:
+def run_agent_loop(starting_prompt, history, complete, execute):
+    while True:
+        completion = complete(starting_prompt, history)
+        print("$ " + completion.replace("\n", "\n$ ") + "\n")
+        execution = execute(completion)
+        print("< " + execution.replace("\n", "\n< ") + "\n")
+        history.append({"completion": completion, "execution": execution})
+
+STARTING_PROMPT = """
+
+""".strip()
+
+def run():
+    starting_prompt = STARTING_PROMPT.format(**json.load(open("prompt_config.json")))
+    history = []
+    groq = Groq()
+    container_id = os.environ["CONTAINER_ID"]
+    def complete(starting_prompt, history):
+        messages = [
+            {
+                "role": "system",
+                "content": starting_prompt
+            },
+        ]
+        for turn in history:
+            messages.append({
+                "role": "assistant",
+                "content": turn["completion"],
+            })
+            messages.append({
+                "role": "user",
+                "content": turn["execution"],
+            })
         try:
-            completion_or_exc = {"completion": completer()}
-            break
-        except Exception as e:
-            completion_or_exc = {"exc": e}
-    if "exc" in completion_or_exc:
-        raise completion_or_exc["exc"]
-    return completion_or_exc["completion"]
+            completion = groq.chat.completions.create(
+                model="llama-3.1-8b-instant",
+                messages=messages,
+            )
+        except APIStatusError as e:
+            if e.status_code == 413: # Context too long
+                history[:] = history[1:]
+                return complete(starting_prompt, history)
+            elif e.status_code == 429: # Rate limited
+                time.sleep(10)
+                return complete(starting_prompt, history)
+            else:
+                raise e
+        return completion.choices[0].message.content
+    def execute(completion):
+        executions = []
+        for params in re.findall(r"^/ssh")
+        return subprocess.run([
+            "docker",
+            "exec",
+            container_id,
+            "bash",
+            "-c",
+            completion,
+        ], stderr=subprocess.STDOUT, stdout=subprocess.PIPE, stdin=subprocess.DEVNULL).stdout.decode()
+    run_agent_loop(starting_prompt, history, complete, execute)
 
-def run(initial_prompt, agent_state_file, completers):
-    completion = complete_any(completers)
-
-
-def main():
-    parser = argparse.ArgumentParser("shell_agent")
-    parser.add_argument("--initial-prompt")
-    parser.add_argument("--agent-state")
-    parser.add_argument("--ai-config")
-    args = parser.parse_args()
-    initial_prompt_path = args.initial_prompt
-    agent_state_path = args.agent_state
-    ai_config_path = args.ai_config
-    completers = []
-    with open(initial_prompt) as initial_prompt_file, open(agent_state_path) as agent_state_file:
-        run(
-            initial_prompt=initial_prompt_file.read(),
-            agent_state_file=agent_state_file,
-            ai_list
-        )
-
-main()
+run()
