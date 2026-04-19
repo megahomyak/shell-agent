@@ -13,3 +13,18 @@ let runPass = async (startingPrompt, complete, execute, history) => {
     }
     return { completion, execution };
 };
+
+let parseHistory = (history) => {
+    let history = [];
+    for (let block of history.split("\n\n")) {
+        if (!block) continue;
+        let role = block[0] == "$" ? "assistant" : "user";
+        let contentLines = [];
+        for (let line in block.split("\n")) {
+            contentLines.push(line.substring(2));
+        }
+        let content = contentLines.join("\n");
+        history.push({ role, content });
+    }
+    return history;
+};
