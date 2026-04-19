@@ -4,31 +4,32 @@ from json.decoder import JSONDecodeError
 
 def run_agent_loop(starting_prompt, history, complete, execute):
     while True:
-        completion = complete(starting_prompt, history)
+        completion = ""
+        with complete(starting_prompt, history) as chunks:
+            print("$ ", end="", flush=True)
+            for chunk in chunks:
+                completion += chunk
+                print(chunk.replace("\n", "\n$ "), end="", flush=True)
+            print()
         print("$ " + completion.replace("\n", "\n$ ") + "\n")
         execution = execute(completion)
         print("< " + execution.replace("\n", "\n< ") + "\n")
         history.append({"completion": completion, "execution": execution})
 
 STARTING_PROMPT = """
-You are an AI assistant with its own computer. To use the computer, you need to invoke the /ssh command like this:
+You are an AI assistant whose every message is directly passed to a new Bash session, one session per message.
 
-/ssh {{"shell_program": "echo a\\necho b"}}
+Your goal is, using the Bash shell you are given, to start listening on a Telegram bot with the token {telegram_token}, and do whatever is ordered from you
 
-You can only invoke the command once per message, and then end the message in order to receive the outcome back
+Your messages are passed directly to Bash, so if you want to think, you have to think inside of Bash comments. Your messages should be Bash scripts executable as is
 
-You have no other commands
-
-Your first task is to wait for messages in a Telegram bot with this token: {telegram_token}. You'd need to do what the incoming message is saying, then write back to the sender with the results, then continue listening for further messages. Program such logic through the shell_program parameter, in which you're supposed to write programs that do what you want
-
-Put that command anywhere into your message, and it will get executed. That's the only way for you to interact with your PC
+You are writing plain text, not Markdown, so do NOT add code fences (```) around your code
 """.strip()
 
 def run():
     starting_prompt = STARTING_PROMPT.format(**json.load(open("prompt_config.json")))
     history = []
     groq = Groq()
-    container_id = os.environ["CONTAINER_ID"]
     def complete(starting_prompt, history):
         messages = [
             {
@@ -47,43 +48,30 @@ def run():
             })
         try:
             completion = groq.chat.completions.create(
-                model="llama-3.3-70b-versatile",
+                model="openai/gpt-oss-120b",
                 messages=messages,
             )
         except APIStatusError as e:
             if e.status_code == 413: # Context too long
+                print(e)
                 history[:] = history[1:]
                 return complete(starting_prompt, history)
             elif e.status_code == 429: # Rate limited
+                print(e)
                 time.sleep(10)
                 return complete(starting_prompt, history)
             else:
                 raise e
         return completion.choices[0].message.content
     def execute(completion):
-        executions = []
-        for params in re.findall(r"^/ssh (.+)$", completion, re.MULTILINE):
-            try:
-                params = json.loads(params)
-            except JSONDecodeError:
-                executions.append({"type": "error", "reason": "invalid JSON in parameter"})
-            else:
-                if "shell_program" not in params:
-                    executions.append({"type": "error", "reason": "key \"shell_program\" missing in parameter"})
-                else:
-                    execution_result = subprocess.run([
-                        "docker",
-                        "exec",
-                        container_id,
-                        "bash",
-                        "-c",
-                        params["shell_program"],
-                    ], stderr=subprocess.STDOUT, stdout=subprocess.PIPE, stdin=subprocess.DEVNULL).stdout.decode()
-                    executions.append({"type": "success", "output": execution_result})
-        return "\n".join(
-            json.dumps(execution)
-            for execution in executions
-        ) or "No command executions found. Please execute a command to see its output"
+        return subprocess.run([
+            "docker",
+            "exec",
+            "shell-agent",
+            "bash",
+            "-c",
+            completion,
+        ], stderr=subprocess.STDOUT, stdout=subprocess.PIPE, stdin=subprocess.DEVNULL).stdout.decode()
     run_agent_loop(starting_prompt, history, complete, execute)
 
 run()
