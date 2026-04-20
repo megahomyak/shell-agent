@@ -16,7 +16,7 @@ def main():
         while True:
             try:
                 completion = groq.chat.completions.create(
-                    model="llama-3.3-70b-versatile",
+                    model="openai/gpt-oss-120b",
                     messages=[{"role": "system", "content": prompt}] + history,
                 ).choices[0].message.content
             except groq_sdk.APIStatusError as e:
