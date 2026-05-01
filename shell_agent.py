@@ -16,8 +16,8 @@ def main():
         openrouter_client = openrouter_sdk.OpenRouter(api_key=f.read().strip())
     def complete(prompt, history):
         completion = openrouter_client.chat.send(
-            model="openrouter/free",
-            messages=[{"role": "system", "content": prompt}] + history[:-10],
+            model="tencent/hy3-preview:free",
+            messages=[{"role": "system", "content": prompt}] + history[:-50],
         ).choices[0].message.content
         if len(completion) > 1000:
             completion = completion[:1000] + "<output trimmed at 1000 characters>"
