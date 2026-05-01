@@ -19,8 +19,6 @@ def main():
             model="tencent/hy3-preview:free",
             messages=[{"role": "system", "content": prompt}] + history[:-50],
         ).choices[0].message.content
-        if len(completion) > 1000:
-            completion = completion[:1000] + "<output trimmed at 1000 characters>"
         print("$ " + completion.replace("\n", "\n$ ") + "\n")
         return completion
     def execute(completion):
@@ -32,6 +30,8 @@ def main():
             "-c",
             completion,
         ], stderr=subprocess.STDOUT, stdout=subprocess.PIPE, stdin=subprocess.DEVNULL).stdout.decode()
+        if len(execution) > 1000:
+            execution = execution[:1000] + "<output trimmed at 1000 characters>"
         print("< " + execution.replace("\n", "\n< ") + "\n")
         return execution
     def remember(history, completion, execution):
