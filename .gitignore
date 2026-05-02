@@ -1,5 +1,2 @@
-/prompt_config.json
-/node_modules
-/prompt.txt
-/history.json
+/instructing_prompt.txt
 /openrouter_api_key.txt
