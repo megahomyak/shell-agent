@@ -11,7 +11,7 @@ while :; do
     CONTENT="$(curl -fsSL "https://openrouter.ai/api/v1/chat/completions" -H "Authorization: Bearer $OPENROUTER_API_KEY" -d "$(jq -cn --argjson HISTORY "$HISTORY" '{"model": "tencent/hy3-preview:free", "messages": $HISTORY}')" | jq -cr '.choices.[0].message.content')"
     add
     ROLE=user
-    CONTENT="$(bash -c "$CONTENT" 2>&1)"
+    CONTENT="$(lxc-attach shell-agent -- bash -c "$CONTENT" 2>&1)"
     add
 done
 )
