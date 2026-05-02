@@ -1,49 +1,64 @@
-import subprocess, json, openrouter as openrouter_sdk, sys
-
-def run_agent(prompt, history, complete, execute, remember, iter_count):
-    while iter_count > 0:
-        completion = complete(prompt, history)
+def run_agent_loop(instructing_prompt, history, complete, execute, remember):
+    while True:
+        completion = complete(instructing_prompt, history)
         execution = execute(completion)
-        remember(history, completion, execution)
-        iter_count -= 1
+        history = remember(history, completion, execution)
 
 def main():
-    with open("prompt.txt") as f: prompt = f.read()
-    try:
-        with open("history.json") as f: history = json.load(f)
-    except FileNotFoundError: history = []
-    with open("openrouter_api_key.txt") as f:
-        openrouter_client = openrouter_sdk.OpenRouter(api_key=f.read().strip())
-    def complete(prompt, history):
-        completion = openrouter_client.chat.send(
-            model="tencent/hy3-preview:free",
-            messages=[{"role": "system", "content": prompt}] + history[:-50],
-        ).choices[0].message.content
-        print("$ " + completion.replace("\n", "\n$ ") + "\n")
-        return completion
-    def execute(completion):
+    def read_instructing_prompt():
+        return open("prompt.txt").read()
+
+    def find_history():
+        import json
+        try:
+            return json.load(open("history.json"))
+        except FileNotFoundError:
+            return []
+
+    def prefix_lines(message, prefix):
+        return prefix + completion.replace("\n", "\n" + prefix)
+
+    def make_completer():
+        import openrouter as openrouter_sdk
+        openrouter_client = openrouter_sdk.OpenRouter(api_key=open("openrouter_api_key.txt").read().strip())
+        def complete():
+            completion = openrouter_client.chat.send(
+                model="tencent/hy3-preview:free",
+                messages=[{"role": "system", "content": prompt}] + history[:-50],
+            ).choices[0].message.content
+            print(prefix_lines(completion, "$ "))
+            print()
+            return completion
+        return complete
+
+    def execute(program):
+        import subprocess
         execution = subprocess.run([
             "lxc-attach",
             "shell-agent",
             "--",
             "bash",
             "-c",
-            completion,
+            program,
         ], stderr=subprocess.STDOUT, stdout=subprocess.PIPE, stdin=subprocess.DEVNULL).stdout.decode()
         if len(execution) > 1000:
             execution = execution[:1000] + "<output trimmed at 1000 characters>"
-        print("< " + execution.replace("\n", "\n< ") + "\n")
+        print(prefix_lines(execution, "< "))
+        print()
         return execution
+
     def remember(history, completion, execution):
-        history.extend([
+        import json
+        with open("history.json", "w") as f:
+            json.dump(f, history)
+        return history[:-48] + [
             {"role": "assistant", "content": completion},
             {"role": "user", "content": execution},
-        ])
-        with open("history.json", "w") as f: json.dump(history, f, indent=0)
-    if len(sys.argv) > 1:
-        iter_count = int(sys.argv[1])
-    else:
-        iter_count = float("inf")
-    run_agent(prompt, history, complete, execute, remember, iter_count)
+        ]
+
+    instructing_prompt = read_instructing_prompt()
+    history = find_history()
+    complete = make_completer()
+    run_agent_loop(instructing_prompt, history, complete, execute, remember)
 
 main()
