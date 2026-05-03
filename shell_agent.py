@@ -36,8 +36,9 @@ def main():
             "-c",
             program,
         ], stderr=subprocess.STDOUT, stdout=subprocess.PIPE, stdin=subprocess.DEVNULL).stdout.decode()
-        if len(execution) > 1000:
-            execution = execution[:10000] + "<output trimmed at 10000 characters>"
+        EXECUTION_MAX_LEN = 10000
+        if len(execution) > EXECUTION_MAX_LEN:
+            execution = execution[:EXECUTION_MAX_LEN] + f"<output trimmed at {EXECUTION_MAX_LEN} characters>"
         print(prefix_lines(execution, "< "))
         print()
         return execution
