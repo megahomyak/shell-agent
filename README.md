@@ -1,4 +1,4 @@
-# shell\_agent
+# shell agent
 
 "shell agent" is the simplest AI agent there can be
 
@@ -19,7 +19,7 @@ build on passing LLM's outputs to Bash and Bash's outputs back to the LLM, and i
 * tell it it's writing Bash and only Bash; some other formats may accidentally work as Bash, but make the model know it should output *only* Bash. does not apply to thinking, thinking should be whatever it wants to do more
 * emphasize to the LLM that it has its own computer that it can use however it wants, and that it's only writing Bash to control the computer, it should only write Bash for its own reasons, that Bash will never be seen by anyone but the computer and the LLM. the LLM should use the computer as a tool, not for show
 * maybe it's worth saying that the "user's" outputs (as they are in the model API) are not actually the user but just the computer's execution of the script that the LLM provides. just so it won't think someone can actually see the stuff it writes
-* tell it it's **very** forgetful so it should edit its memory file - `~/MEMORY.md` - as its memory and always be sure that it can see at least one full read of `~/MEMORY.md` in its chat history (or context, or dialogue, or however you wanna call it), and if it can't, it means it has forgotten its `~/MEMORY.md` and should display its contents to itself. it should use that file religiously if its context window is tiny
+* tell it it's **very** forgetful so it should edit its memory file - `~/MEMORY.md` - as its memory and always be sure that it can see at least one full read of `~/MEMORY.md` in its chat history (or context, or dialogue, or however you wanna call it), and if it can't, it means it has forgotten its `~/MEMORY.md` and should display its contents to itself. it should use that file religiously if its context window is tiny. it may be good to tell it to remove old stuff from its memory, just so the memory won't get clogged over time
 * if you're worried about it burning too many tokens, you may ask it to sleep for events that it needs
 * since LLMs love outputting huge programs, you may want to either tell it to output tiny programs and go step by step collecting outputs, or write huge tools once and then just call them. or both
 * if you want to talk to it, you'd need some communication channel. you can give it e.g. Telegram bot creds in the instructing prompt, it will contact you there on its own, no need for extra scaffolding
@@ -33,6 +33,7 @@ build on passing LLM's outputs to Bash and Bash's outputs back to the LLM, and i
 
 * `instructing_prompt.txt`
 * `openrouter_api_key.txt`
+* `openrouter_model.txt`
 * a running LXC container with the name `shell-agent`
 
 #### how to create and run that LXC container

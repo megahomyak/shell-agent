@@ -14,13 +14,16 @@ def main():
     def make_openrouter_completer():
         import openrouter as openrouter_sdk
         openrouter_client = openrouter_sdk.OpenRouter(api_key=open("openrouter_api_key.txt").read().strip())
+        openrouter_model = open("openrouter_model.txt").read().strip()
         def complete(instructing_prompt, temporary_memory):
-            import time
-            time.sleep(10)
-            completion = openrouter_client.chat.send(
-                model="tencent/hy3-preview:free",
+            response = openrouter_client.chat.send(
+                model=openrouter_model,
                 messages=[{"role": "system", "content": instructing_prompt}] + temporary_memory,
-            ).choices[0].message.content
+            ).choices[0].message
+            if response.reasoning:
+                print(prefix_lines(response.reasoning, "! "))
+                print()
+            completion = response.content
             print(prefix_lines(completion, "$ "))
             print()
             return completion
