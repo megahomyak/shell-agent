@@ -23,6 +23,7 @@ build on passing LLM's outputs to Bash and Bash's outputs back to the LLM, and i
 * if you're worried about it burning too many tokens, you may ask it to sleep for events that it needs
 * since LLMs love outputting huge programs, you may want to either tell it to output tiny programs and go step by step collecting outputs, or write huge tools once and then just call them. or both
 * if you want to talk to it, you'd need some communication channel. you can give it e.g. Telegram bot creds in the instructing prompt, it will contact you there on its own, no need for extra scaffolding
+* the LLM should probably return control to it ASAP. so e.g. listening on Telegram until a message arrives, the message gets printed back to the LLM, and control returns to the LLM. it should really never block itself
 
 ## how to run the current agent
 
